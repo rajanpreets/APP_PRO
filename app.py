@@ -102,7 +102,7 @@ if st.button("Get News"):
           "gl": "us",
           "hl": "en",
           "tbm": "nws",
-          "tbs": "qdr:w"
+          "tbs": "qdr:m"
         }
 
         search = GoogleSearch(params)
@@ -111,7 +111,7 @@ if st.button("Get News"):
         news_results = results.get('news_results', [])
         news_data = []
 
-        for item in news_results[:3]:
+        for item in news_results[:5]:
             link = item.get('link')
             title = item.get('title')
             snippet = item.get('snippet')
