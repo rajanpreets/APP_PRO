@@ -7,7 +7,6 @@ import NewsTab from './tabs/NewsTab';
 import SECTab from './tabs/SECTab';
 import SNOMEDTab from './tabs/SNOMEDTab';
 
-
 const ResultsDashboard = ({ results, summary, query, searchType }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [availableTabs, setAvailableTabs] = useState([]);
@@ -15,14 +14,15 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
   // Determine which tabs should be available based on the results and searchType
   useEffect(() => {
     const tabs = [
-  { id: 'summary', label: 'Summary', visible: !!summary && !summary.error },
-  { id: 'fda', label: 'FDA', visible: results.fda && !results.fda.error },
-  { id: 'clinical_trials', label: 'Clinical Trials', visible: results.clinical_trials && !results.clinical_trials.error },
-  { id: 'ncbi', label: 'NCBI Publications', visible: results.ncbi && !results.ncbi.error },
-  { id: 'news', label: 'News', visible: results.news && !results.news.error },
-  { id: 'sec', label: 'SEC Company Info', visible: searchType === 'drug' && results.sec && !results.sec.error },
-  { id: 'snomed', label: 'Medical Terms', visible: results.snomed && !results.snomed.error }
-];
+      { id: 'summary', label: 'Summary', visible: !!summary && !summary.error },
+      { id: 'fda', label: 'FDA', visible: results.fda && !results.fda.error },
+      { id: 'clinical_trials', label: 'Clinical Trials', visible: results.clinical_trials && !results.clinical_trials.error },
+      { id: 'ncbi', label: 'NCBI Publications', visible: results.ncbi && !results.ncbi.error },
+      { id: 'news', label: 'News', visible: results.news && !results.news.error },
+      { id: 'sec', label: 'SEC Company Info', visible: searchType === 'drug' && results.sec && !results.sec.error },
+      { id: 'snomed', label: 'Medical Terms', visible: results.snomed && !results.snomed.error }
+    ];
+
     const availableTabs = tabs.filter(tab => tab.visible);
     setAvailableTabs(availableTabs);
 
@@ -48,8 +48,6 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
         return <SECTab data={results.sec} />;
       case 'snomed':
         return <SNOMEDTab data={results.snomed} query={query} />;
-      case 'serper':
-        return <SerperTab data={results.serper} />;
       default:
         return <div>Select a tab to view results</div>;
     }
