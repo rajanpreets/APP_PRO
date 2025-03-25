@@ -25,10 +25,10 @@ const ResultsDashboard = ({ results = {}, summary = {}, query = '', searchType =
     const hasFDA = results.fda && Array.isArray(results.fda) && results.fda.length > 0;
     const hasClinicalTrials = results.clinical_trials && Array.isArray(results.clinical_trials) && results.clinical_trials.length > 0;
     const hasNCBI = results.ncbi && Array.isArray(results.ncbi) && results.ncbi.length > 0;
-    const hasNews = results.news && typeof results.news === 'object' && Object.keys(results.news || {}).length > 0 && !results.news.error;
+    const hasNews = results.news && typeof results.news === 'object' && results.news !== null && Object.keys(results.news).length > 0 && !results.news.error;
     const hasSEC = searchType === 'drug' && results.sec && Array.isArray(results.sec) && results.sec.length > 0;
     const hasSNOMED = results.snomed && Array.isArray(results.snomed) && results.snomed.length > 0;
-    const hasSummary = summary && typeof summary === 'object' && Object.keys(summary || {}).length > 0 && !summary.error;
+    const hasSummary = summary && typeof summary === 'object' && summary !== null && Object.keys(summary).length > 0 && !summary.error;
 
     const tabs = [
       { id: 'summary', label: 'Summary', visible: hasSummary },
