@@ -8,7 +8,7 @@ import SECTab from './tabs/SECTab';
 import SNOMEDTab from './tabs/SNOMEDTab';
 import './ResultsDashboard.css'; // Make sure this file exists
 
-const ResultsDashboard = ({ results, summary, query, searchType }) => {
+const ResultsDashboard = ({ results = {}, summary = {}, query = '', searchType = 'drug' }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [availableTabs, setAvailableTabs] = useState([]);
   
@@ -16,19 +16,19 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
 
   // Determine which tabs should be available based on the results and searchType
   useEffect(() => {
-    if (!results) {
+    if (!results || typeof results !== 'object') {
       setAvailableTabs([]);
       return;
     }
 
-    // Safely check if properties exist
+    // Safely check if properties exist with null checks
     const hasFDA = results.fda && Array.isArray(results.fda) && results.fda.length > 0;
     const hasClinicalTrials = results.clinical_trials && Array.isArray(results.clinical_trials) && results.clinical_trials.length > 0;
     const hasNCBI = results.ncbi && Array.isArray(results.ncbi) && results.ncbi.length > 0;
-    const hasNews = results.news && typeof results.news === 'object' && Object.keys(results.news).length > 0 && !results.news.error;
+    const hasNews = results.news && typeof results.news === 'object' && Object.keys(results.news || {}).length > 0 && !results.news.error;
     const hasSEC = searchType === 'drug' && results.sec && Array.isArray(results.sec) && results.sec.length > 0;
     const hasSNOMED = results.snomed && Array.isArray(results.snomed) && results.snomed.length > 0;
-    const hasSummary = !!summary && typeof summary === 'object' && Object.keys(summary).length > 0 && !summary.error;
+    const hasSummary = summary && typeof summary === 'object' && Object.keys(summary || {}).length > 0 && !summary.error;
 
     const tabs = [
       { id: 'summary', label: 'Summary', visible: hasSummary },
@@ -51,7 +51,7 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
   }, [results, summary, searchType, activeTab]);
 
   const renderTabContent = () => {
-    if (!results) return <div className="loading-placeholder">Loading results...</div>;
+    if (!results || typeof results !== 'object') return <div className="loading-placeholder">Loading results...</div>;
 
     switch (activeTab) {
       case 'summary':
@@ -74,7 +74,7 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
   };
 
   // If no results yet, show a message
-  if (!results) {
+  if (!results || typeof results !== 'object') {
     return (
       <div className="results-dashboard">
         <div className="card results-card">
