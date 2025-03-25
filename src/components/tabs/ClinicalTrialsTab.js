@@ -1,60 +1,51 @@
 import React, { useState, useMemo } from 'react';
 
 const ClinicalTrialsTab = ({ data }) => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('ongoing');
   const [selectedTrial, setSelectedTrial] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // Handle empty or error data
-  if (!data || (Array.isArray(data) && data.length === 0)) {
-    return (
-      <div className="no-data">
-        <p>No clinical trials found.</p>
-      </div>
-    );
-  }
-  
-  // Convert to array if it's not already
-  const dataArray = Array.isArray(data) ? data : [data];
-  
-  // Group trials by status
+  // Move useMemo hooks to the top level, before any conditional returns
+  // Group trials by status - always run this even if data is empty
   const groupedTrials = useMemo(() => {
     const groups = {
-      recruiting: [],
-      active: [],
+      ongoing: [],
       completed: [],
-      other: [],
-      all: []
+      recruiting: [],
+      other: []
     };
     
-    dataArray.forEach(trial => {
-      // Add to 'all' group
-      groups.all.push(trial);
-      
-      const status = trial.overallStatus?.toLowerCase() || '';
-      
-      if (status.includes('recruiting')) {
-        groups.recruiting.push(trial);
-      } else if (status.includes('active') || status === 'ongoing' || status.includes('enrolling')) {
-        groups.active.push(trial);
-      } else if (status === 'completed') {
-        groups.completed.push(trial);
-      } else {
-        groups.other.push(trial);
-      }
-    });
+    // Only process if we have valid data
+    if (data && Array.isArray(data) && data.length > 0) {
+      data.forEach(trial => {
+        const status = trial.overallStatus?.toLowerCase() || '';
+        
+        if (status.includes('recruit')) {
+          groups.recruiting.push(trial);
+        } else if (status.includes('active') || status.includes('enrolling') || status === 'not yet recruiting') {
+          groups.ongoing.push(trial);
+        } else if (status === 'completed') {
+          groups.completed.push(trial);
+        } else {
+          groups.other.push(trial);
+        }
+      });
+    }
     
     return groups;
-  }, [dataArray]);
+  }, [data]);
   
-  // Filter trials by search term
+  // Filter trials based on search term - always run this even if data is empty
   const filteredTrials = useMemo(() => {
+    // Default to empty array
+    const currentTabTrials = groupedTrials[activeTab] || [];
+    
     if (!searchTerm.trim()) {
-      return groupedTrials[activeTab] || [];
+      return currentTabTrials;
     }
     
     const searchLower = searchTerm.toLowerCase();
-    return (groupedTrials[activeTab] || []).filter(trial => {
+    return currentTabTrials.filter(trial => {
       return (
         (trial.briefTitle && trial.briefTitle.toLowerCase().includes(searchLower)) ||
         (trial.officialTitle && trial.officialTitle.toLowerCase().includes(searchLower)) ||
@@ -64,50 +55,62 @@ const ClinicalTrialsTab = ({ data }) => {
     });
   }, [groupedTrials, activeTab, searchTerm]);
   
-  // Format a date string
+  // Handle empty data after hooks are defined
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="no-data">
+        <p>No clinical trials found.</p>
+      </div>
+    );
+  }
+  
+  // Handle trial selection
+  const handleTrialSelect = (trial) => {
+    setSelectedTrial(trial);
+  };
+  
+  // Format date string
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Unknown';
     
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString();
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
     } catch {
       return dateStr;
     }
   };
 
   return (
-    <div className="ct-tab">
+    <div className="clinical-trials-results">
       <div className="ct-header">
-        <h3 className="ct-title">Clinical Trials ({dataArray.length})</h3>
+        <h3 className="ct-title">Clinical Trials ({data.length})</h3>
         
         <div className="ct-tabs">
           <div 
-            className={`ct-tab-item ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            All ({groupedTrials.all.length})
-          </div>
-          <div 
-            className={`ct-tab-item ${activeTab === 'recruiting' ? 'active' : ''}`}
+            className={`ct-tab ${activeTab === 'recruiting' ? 'active' : ''}`}
             onClick={() => setActiveTab('recruiting')}
           >
             Recruiting ({groupedTrials.recruiting.length})
           </div>
           <div 
-            className={`ct-tab-item ${activeTab === 'active' ? 'active' : ''}`}
-            onClick={() => setActiveTab('active')}
+            className={`ct-tab ${activeTab === 'ongoing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ongoing')}
           >
-            Active ({groupedTrials.active.length})
+            Ongoing ({groupedTrials.ongoing.length})
           </div>
           <div 
-            className={`ct-tab-item ${activeTab === 'completed' ? 'active' : ''}`}
+            className={`ct-tab ${activeTab === 'completed' ? 'active' : ''}`}
             onClick={() => setActiveTab('completed')}
           >
             Completed ({groupedTrials.completed.length})
           </div>
           <div 
-            className={`ct-tab-item ${activeTab === 'other' ? 'active' : ''}`}
+            className={`ct-tab ${activeTab === 'other' ? 'active' : ''}`}
             onClick={() => setActiveTab('other')}
           >
             Other ({groupedTrials.other.length})
@@ -125,34 +128,32 @@ const ClinicalTrialsTab = ({ data }) => {
         />
       </div>
       
-      <div className="ct-content">
+      <div className="ct-layout">
         <div className="ct-list">
           {filteredTrials.length === 0 ? (
             <div className="no-trials">
               <p>No trials found in this category.</p>
             </div>
           ) : (
-            <div className="trials-container">
-              {filteredTrials.map((trial, idx) => (
-                <div 
-                  key={trial.nctId || idx}
-                  className={`trial-item ${selectedTrial === trial ? 'active' : ''}`}
-                  onClick={() => setSelectedTrial(trial)}
-                >
-                  <h4 className="trial-title">
-                    {trial.briefTitle || 'Untitled Trial'}
-                  </h4>
-                  <div className="trial-meta">
-                    <span className="trial-id">ID: {trial.nctId || 'Unknown'}</span>
-                    <span className="trial-status">{trial.overallStatus || 'Unknown Status'}</span>
-                    {trial.phases && <span className="trial-phase">{trial.phases}</span>}
-                  </div>
-                  <p className="trial-sponsor">
-                    {trial.leadSponsor || 'Unknown Sponsor'}
-                  </p>
+            filteredTrials.map((trial, idx) => (
+              <div 
+                key={trial.nctId || idx}
+                className={`trial-item ${selectedTrial === trial ? 'active' : ''}`}
+                onClick={() => handleTrialSelect(trial)}
+              >
+                <h4 className="trial-title">
+                  {trial.briefTitle || 'Untitled Trial'}
+                </h4>
+                <div className="trial-meta">
+                  <span className="trial-id">ID: {trial.nctId || 'Unknown'}</span>
+                  <span className="trial-status">{trial.overallStatus || 'Unknown Status'}</span>
+                  {trial.phases && <span className="trial-phase">{trial.phases}</span>}
                 </div>
-              ))}
-            </div>
+                <p className="trial-sponsor">
+                  {trial.leadSponsor || 'Unknown Sponsor'}
+                </p>
+              </div>
+            ))
           )}
         </div>
         
@@ -252,7 +253,7 @@ const ClinicalTrialsTab = ({ data }) => {
       </div>
       
       <style jsx>{`
-        .ct-tab {
+        .clinical-trials-results {
           padding: 0.5rem;
         }
         
@@ -268,26 +269,23 @@ const ClinicalTrialsTab = ({ data }) => {
         
         .ct-tabs {
           display: flex;
-          overflow-x: auto;
-          margin-bottom: 1rem;
           border-bottom: 1px solid var(--border-color);
         }
         
-        .ct-tab-item {
-          padding: 0.6rem 1rem;
+        .ct-tab {
+          padding: 0.75rem 1rem;
           cursor: pointer;
-          white-space: nowrap;
+          font-size: 0.9rem;
           border-bottom: 3px solid transparent;
-          transition: all 0.2s ease;
         }
         
-        .ct-tab-item:hover {
+        .ct-tab:hover {
           color: var(--secondary-color);
         }
         
-        .ct-tab-item.active {
-          color: var(--secondary-color);
+        .ct-tab.active {
           border-bottom-color: var(--secondary-color);
+          color: var(--secondary-color);
           font-weight: 500;
         }
         
@@ -295,20 +293,17 @@ const ClinicalTrialsTab = ({ data }) => {
           margin-bottom: 1.5rem;
         }
         
-        .ct-content {
+        .ct-layout {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+          grid-template-columns: 1fr 2fr;
           gap: 1.5rem;
+          min-height: 500px;
         }
         
         .ct-list {
           border-right: 1px solid var(--border-color);
-          max-height: 600px;
-        }
-        
-        .trials-container {
           overflow-y: auto;
-          max-height: 600px;
+          max-height: 700px;
           padding-right: 1rem;
         }
         
@@ -318,7 +313,7 @@ const ClinicalTrialsTab = ({ data }) => {
           border-radius: 6px;
           margin-bottom: 1rem;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
         
         .trial-item:hover {
@@ -327,7 +322,7 @@ const ClinicalTrialsTab = ({ data }) => {
         
         .trial-item.active {
           border-color: var(--secondary-color);
-          background-color: rgba(52, 152, 219, 0.05);
+          box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
         }
         
         .trial-title {
@@ -370,7 +365,18 @@ const ClinicalTrialsTab = ({ data }) => {
         
         .ct-details {
           overflow-y: auto;
-          max-height: 600px;
+          max-height: 700px;
+          padding-left: 1rem;
+        }
+        
+        .no-data, .no-trials, .no-selection {
+          display: flex;
+          height: 200px;
+          justify-content: center;
+          align-items: center;
+          color: var(--light-text);
+          border: 1px dashed var(--border-color);
+          border-radius: 6px;
         }
         
         .trial-details-title {
@@ -382,7 +388,7 @@ const ClinicalTrialsTab = ({ data }) => {
         
         .trial-details-meta {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 1rem;
           margin-bottom: 1.5rem;
           padding-bottom: 1rem;
@@ -403,15 +409,6 @@ const ClinicalTrialsTab = ({ data }) => {
         .meta-value {
           font-size: 0.95rem;
           font-weight: 500;
-        }
-        
-        .meta-value a {
-          color: var(--secondary-color);
-          text-decoration: none;
-        }
-        
-        .meta-value a:hover {
-          text-decoration: underline;
         }
         
         .details-section {
@@ -441,30 +438,22 @@ const ClinicalTrialsTab = ({ data }) => {
           background-color: rgba(52, 152, 219, 0.05);
         }
         
-        .no-trials, .no-selection, .no-data {
-          display: flex;
-          height: 200px;
-          justify-content: center;
-          align-items: center;
-          color: var(--light-text);
-          border: 1px dashed var(--border-color);
-          border-radius: 6px;
-        }
-        
         @media (max-width: 992px) {
-          .ct-content {
+          .ct-layout {
             grid-template-columns: 1fr;
           }
           
           .ct-list {
             border-right: none;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 1.5rem;
-            padding-bottom: 1.5rem;
+            padding-right: 0;
+            padding-bottom: 1rem;
+            max-height: 400px;
           }
           
-          .trials-container {
-            max-height: 300px;
+          .ct-details {
+            padding-left: 0;
+            padding-top: 1rem;
           }
         }
       `}</style>
