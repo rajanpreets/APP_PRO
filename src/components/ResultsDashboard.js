@@ -13,14 +13,19 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
 
   // Determine which tabs should be available based on the results and searchType
   useEffect(() => {
+    if (!results) {
+      setAvailableTabs([]);
+      return;
+    }
+
     const tabs = [
-      { id: 'summary', label: 'Summary', visible: !!summary && !summary.error },
-      { id: 'fda', label: 'FDA', visible: results.fda && !results.fda.error },
-      { id: 'clinical_trials', label: 'Clinical Trials', visible: results.clinical_trials && !results.clinical_trials.error },
-      { id: 'ncbi', label: 'NCBI Publications', visible: results.ncbi && !results.ncbi.error },
-      { id: 'news', label: 'News', visible: results.news && !results.news.error },
-      { id: 'sec', label: 'SEC Company Info', visible: searchType === 'drug' && results.sec && !results.sec.error },
-      { id: 'snomed', label: 'Medical Terms', visible: results.snomed && !results.snomed.error }
+      { id: 'summary', label: 'Summary', visible: !!summary && Object.keys(summary).length > 0 && !summary.error },
+      { id: 'fda', label: 'FDA', visible: results.fda && Array.isArray(results.fda) && results.fda.length > 0 },
+      { id: 'clinical_trials', label: 'Clinical Trials', visible: results.clinical_trials && Array.isArray(results.clinical_trials) && results.clinical_trials.length > 0 },
+      { id: 'ncbi', label: 'NCBI Publications', visible: results.ncbi && Array.isArray(results.ncbi) && results.ncbi.length > 0 },
+      { id: 'news', label: 'News', visible: results.news && Object.keys(results.news).length > 0 && !results.news.error },
+      { id: 'sec', label: 'SEC Company Info', visible: searchType === 'drug' && results.sec && Array.isArray(results.sec) && results.sec.length > 0 },
+      { id: 'snomed', label: 'Medical Terms', visible: results.snomed && Array.isArray(results.snomed) && results.snomed.length > 0 }
     ];
 
     const availableTabs = tabs.filter(tab => tab.visible);
@@ -33,6 +38,8 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
   }, [results, summary, searchType, activeTab]);
 
   const renderTabContent = () => {
+    if (!results) return <div className="loading-placeholder">Loading results...</div>;
+
     switch (activeTab) {
       case 'summary':
         return <SummaryTab summary={summary} query={query} searchType={searchType} />;
@@ -52,6 +59,23 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
         return <div>Select a tab to view results</div>;
     }
   };
+
+  // If no results yet, show a message
+  if (!results) {
+    return (
+      <div className="results-dashboard">
+        <div className="card results-card">
+          <div className="card-header">
+            <h2 className="card-title">Waiting for results...</h2>
+          </div>
+          <div className="no-results">
+            <p>Enter a search query and select data sources to see results.</p>
+          </div>
+        </div>
+        <style jsx>{styles}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="results-dashboard">
@@ -95,6 +119,24 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
         
         .results-card {
           overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          border-radius: 8px;
+          background-color: white;
+          margin-bottom: 2rem;
+        }
+        
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid var(--border-color);
+        }
+        
+        .card-title {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 600;
         }
         
         .search-type-badge {
@@ -113,6 +155,15 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
           margin-bottom: 0;
           padding-bottom: 0;
           -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+        }
+        
+        .tabs::-webkit-scrollbar {
+          height: 3px;
+        }
+        
+        .tabs::-webkit-scrollbar-thumb {
+          background-color: var(--secondary-color);
         }
         
         .tab {
@@ -134,13 +185,21 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
         }
         
         .tab-content {
-          padding: 1.5rem 0.5rem 0.5rem;
+          padding: 1.5rem 1rem 1rem;
           min-height: 400px;
         }
         
         .no-results {
           padding: 3rem 1rem;
           text-align: center;
+          color: var(--light-text);
+        }
+        
+        .loading-placeholder {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 400px;
           color: var(--light-text);
         }
 
@@ -152,6 +211,15 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
           
           .tab-content {
             padding: 1rem 0.25rem 0.25rem;
+          }
+          
+          .card-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          
+          .search-type-badge {
+            margin-top: 0.5rem;
           }
         }
       `}</style>
