@@ -72,7 +72,39 @@ const ResultsDashboard = ({ results, summary, query, searchType }) => {
             <p>Enter a search query and select data sources to see results.</p>
           </div>
         </div>
-        <style jsx>{styles}</style>
+        <style jsx>{`
+          .results-dashboard {
+            width: 100%;
+          }
+          
+          .results-card {
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            background-color: white;
+            margin-bottom: 2rem;
+          }
+          
+          .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+          }
+          
+          .card-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+          }
+          
+          .no-results {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: var(--light-text);
+          }
+        `}</style>
       </div>
     );
   }
