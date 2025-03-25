@@ -1,39 +1,44 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import main
+import os
 import json
 import pandas as pd
-import os
 import logging
-from dotenv import load_dotenv
+from datetime import datetime
 
-# Load environment variables
-load_dotenv()
+# Import API modules
+import fda_api
+import ct_api
+import sec_api
+import ncbi_api
+import serper_api
+import llm_api
+import snomed_api
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes and origins
 
-# Get the data integrator instance
-data_integrator = main.data_integrator
+# Create API clients
+try:
+    fda_client = fda_api.OpenFDA()
+    ct_client = ct_api.ClinicalTrialsAPI()
+    sec_client = sec_api.SECAPI()
+    ncbi_client = ncbi_api.NCBIAPI()
+    serper_client = serper_api.SerperAPI()
+    llm_client = llm_api.GroqAPI()
+    snomed_client = snomed_api.SnomedAPI()
+    logger.info("API clients initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing API clients: {str(e)}")
 
 @app.route('/api/search', methods=['POST'])
 def search():
     """
     Endpoint to search for drug or disease information
-    
-    Request JSON:
-    {
-        "query": "query string",
-        "type": "drug" or "disease",
-        "sources": ["fda", "clinical_trials", etc.] (optional)
-    }
     """
     try:
         data = request.json
@@ -46,39 +51,66 @@ def search():
         
         logger.info(f"Search request: query={query}, type={search_type}, sources={sources}")
         
-        if search_type == 'drug':
-            results = data_integrator.search_drug(query, sources)
-        elif search_type == 'disease':
-            results = data_integrator.search_disease(query, sources)
-        else:
-            return jsonify({"error": "Invalid search type"}), 400
+        results = {}
         
-        # Convert pandas DataFrames to JSON
-        processed_results = {}
-        for key, value in results.items():
-            if isinstance(value, pd.DataFrame):
-                processed_results[key] = value.to_dict(orient='records')
-            else:
-                processed_results[key] = value
+        # Process each source based on selection
+        if not sources or 'fda' in sources:
+            try:
+                results['fda'] = fda_client.open_fda_main(query, search_type)
+                if isinstance(results['fda'], pd.DataFrame):
+                    results['fda'] = results['fda'].to_dict(orient='records')
+            except Exception as e:
+                results['fda'] = {"error": str(e)}
+                
+        if not sources or 'clinical_trials' in sources:
+            try:
+                results['clinical_trials'] = ct_client.get_clinical_trials_data(query)
+                if isinstance(results['clinical_trials'], pd.DataFrame):
+                    results['clinical_trials'] = results['clinical_trials'].to_dict(orient='records')
+            except Exception as e:
+                results['clinical_trials'] = {"error": str(e)}
+                
+        if not sources or 'sec' in sources:
+            try:
+                results['sec'] = sec_client.get_company_details(query)
+                if isinstance(results['sec'], pd.DataFrame):
+                    results['sec'] = results['sec'].to_dict(orient='records')
+            except Exception as e:
+                results['sec'] = {"error": str(e)}
+                
+        if not sources or 'ncbi' in sources:
+            try:
+                results['ncbi'] = ncbi_client.search_publications(query)
+                if isinstance(results['ncbi'], pd.DataFrame):
+                    results['ncbi'] = results['ncbi'].to_dict(orient='records')
+            except Exception as e:
+                results['ncbi'] = {"error": str(e)}
+                
+        if not sources or 'news' in sources:
+            try:
+                results['news'] = serper_client.search_news(query)
+            except Exception as e:
+                results['news'] = {"error": str(e)}
+                
+        if not sources or 'snomed' in sources:
+            try:
+                results['snomed'] = snomed_client.search_terms(query)
+                if isinstance(results['snomed'], pd.DataFrame):
+                    results['snomed'] = results['snomed'].to_dict(orient='records')
+            except Exception as e:
+                results['snomed'] = {"error": str(e)}
         
         logger.info(f"Search completed successfully for {query}")
-        return jsonify(processed_results)
+        return jsonify(results)
     
     except Exception as e:
-        logger.error(f"Error in search endpoint: {str(e)}", exc_info=True)
+        logger.error(f"Error in search endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/summarize', methods=['POST'])
 def summarize():
     """
     Endpoint to summarize data with LLM
-    
-    Request JSON:
-    {
-        "data": {data object},
-        "query": "original query string",
-        "type": "drug" or "disease" (optional)
-    }
     """
     try:
         data = request.json
@@ -91,13 +123,13 @@ def summarize():
         
         logger.info(f"Summarize request: query={query}, type={search_type}")
         
-        summary = data_integrator.summarize_with_llm(query_data, query, search_type)
+        summary = llm_client.summarize_data(query_data, query)
         
         logger.info(f"Summarization completed successfully for {query}")
         return jsonify(summary)
     
     except Exception as e:
-        logger.error(f"Error in summarize endpoint: {str(e)}", exc_info=True)
+        logger.error(f"Error in summarize endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/sources', methods=['GET'])
@@ -109,7 +141,6 @@ def get_sources():
         "sec": "SEC Company Information",
         "ncbi": "NCBI Publications",
         "news": "Latest News",
-        "serper": "Google Search Results",
         "snomed": "SNOMED-CT Medical Terminology"
     }
     return jsonify(sources)
@@ -125,20 +156,10 @@ def index():
     return jsonify({
         "name": "Healthcare Data Integration Platform API",
         "version": "1.0.0",
-        "endpoints": {
-            "/api/search": "POST - Search for drug or disease information",
-            "/api/summarize": "POST - Generate summaries using LLM",
-            "/api/sources": "GET - List available data sources",
-            "/health": "GET - Health check"
-        }
+        "status": "operational"
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
-    
-    # Log startup information
-    logger.info(f"Starting Healthcare Data Integration Platform API on port {port}")
-    logger.info(f"Debug mode: {debug}")
-    
     app.run(host='0.0.0.0', port=port, debug=debug)
