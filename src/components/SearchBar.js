@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './SearchBar.css';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
@@ -17,36 +16,39 @@ const SearchBar = ({ onSearch }) => {
   };
 
   return (
-    <div className="search-bar">
+    <div style={{ width: '100%' }}>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="form-label">Search for:</label>
-          <div className="search-type-selector">
-            <label className="radio-label">
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <input
                 type="radio"
                 value="drug"
                 checked={searchType === 'drug'}
                 onChange={() => setSearchType('drug')}
+                style={{ marginRight: '0.5rem' }}
               />
               <span>Drug</span>
             </label>
-            <label className="radio-label">
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <input
                 type="radio"
                 value="disease"
                 checked={searchType === 'disease'}
                 onChange={() => setSearchType('disease')}
+                style={{ marginRight: '0.5rem' }}
               />
               <span>Disease</span>
             </label>
           </div>
         </div>
         
-        <div className="form-group search-input-container">
+        <div className="form-group" style={{ display: 'flex', gap: '0.5rem' }}>
           <input
             type="text"
-            className="form-control search-input"
+            className="form-control"
+            style={{ flexGrow: 1 }}
             placeholder={`Enter ${searchType} name...`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -54,7 +56,8 @@ const SearchBar = ({ onSearch }) => {
           />
           <button 
             type="submit" 
-            className="btn btn-primary search-button"
+            className="btn btn-primary"
+            style={{ whiteSpace: 'nowrap', minWidth: '120px' }}
             disabled={!query.trim() || isSubmitting}
           >
             {isSubmitting ? 'Searching...' : 'Search'}
