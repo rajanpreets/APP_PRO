@@ -1,7 +1,8 @@
 import React from 'react';
 
-const SummaryTab = ({ summary, query, searchType }) => {
-  if (!summary) {
+const SummaryTab = ({ summary = {}, query = '', searchType = 'drug' }) => {
+  // More defensive check for summary
+  if (!summary || typeof summary !== 'object' || summary === null || Object.keys(summary || {}).length === 0) {
     return (
       <div className="no-summary">
         <p>No summary available.</p>
@@ -42,7 +43,8 @@ const SummaryTab = ({ summary, query, searchType }) => {
 
   // Function to render the content of a section
   const renderSectionContent = (sectionId) => {
-    if (!summary || !summary[sectionId]) {
+    // More defensive check for section content
+    if (!summary || typeof summary !== 'object' || !summary[sectionId] || typeof summary[sectionId] !== 'string') {
       return <p>No information available.</p>;
     }
 
