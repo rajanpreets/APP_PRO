@@ -22,6 +22,8 @@ function App() {
     setSummary(null);
     
     try {
+      console.log('Searching for:', searchQuery, type, sources);
+      
       // API call to your backend search endpoint
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -36,29 +38,47 @@ function App() {
       });
       
       if (!response.ok) {
-        throw new Error('Search failed. Please try again later.');
+        throw new Error(`Search failed with status: ${response.status}`);
       }
       
       const data = await response.json();
-      setResults(data);
+      console.log('Search results:', data);
+      
+      // Initialize with empty objects for each source if they don't exist
+      const processedData = {};
+      sources.forEach(source => {
+        // Ensure each source has at least an empty array
+        processedData[source] = data[source] || [];
+      });
+      
+      setResults(processedData);
       
       // After getting results, get the summary
       if (Object.keys(data).length > 0) {
-        const summaryResponse = await fetch('/api/summarize', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: searchQuery,
-            type: type,
-            data: data,
-          }),
-        });
-        
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json();
-          setSummary(summaryData);
+        try {
+          const summaryResponse = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: searchQuery,
+              type: type,
+              data: data,
+            }),
+          });
+          
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            console.log('Summary data:', summaryData);
+            setSummary(summaryData || {});
+          } else {
+            console.error('Failed to get summary');
+            setSummary({ error: 'Failed to generate summary' });
+          }
+        } catch (summaryErr) {
+          console.error('Error getting summary:', summaryErr);
+          setSummary({ error: summaryErr.message });
         }
       }
     } catch (err) {
@@ -100,7 +120,7 @@ function App() {
         {error && <ErrorMessage message={error} />}
         {loading && <LoadingSpinner />}
         
-        {results && !loading && (
+        {!loading && (
           <ResultsDashboard 
             results={results} 
             summary={summary}
