@@ -1,95 +1,112 @@
-import React, { useState, useEffect } from 'react';
-// Import any other components or dependencies you're using
+import React, { useState } from 'react';
+import './App.css';
+import SearchBar from './components/SearchBar';
+import SourceSelector from './components/SourceSelector';
+import ResultsDashboard from './components/ResultsDashboard';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorMessage from './components/ErrorMessage';
 
 function App() {
-  // Define state variables with useState hooks
+  const [query, setQuery] = useState('');
+  const [searchType, setSearchType] = useState('drug');
+  const [selectedSources, setSelectedSources] = useState(['clinical_trials', 'fda', 'ncbi', 'news', 'sec', 'snomed']);
+  const [results, setResults] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [availableSources, setAvailableSources] = useState({});
-  const [selectedSources, setSelectedSources] = useState([]);
-  // Include any other state variables your app needs
+  const [error, setError] = useState(null);
 
-  // Fetch sources when component mounts
-  useEffect(() => {
-    fetchSources();
-  }, []);
-
-  // Function to fetch available sources from API
-  const fetchSources = async () => {
+  const handleSearch = async (searchQuery, type, sources) => {
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    setSummary(null);
+    
     try {
-      setLoading(true);
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sources`);
+      // API call to your backend search endpoint
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          type: type,
+          sources: sources,
+        }),
+      });
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error('Search failed. Please try again later.');
       }
+      
       const data = await response.json();
-      setAvailableSources(data);
-      // Default select all sources
-      setSelectedSources(Object.keys(data));
-    } catch (error) {
-      console.error('Error fetching sources:', error);
-      // Set fallback sources if API fails
-      const fallbackSources = {
-        'fda': 'FDA Drug Information',
-        'clinical_trials': 'Clinical Trials',
-        'sec': 'SEC Company Information',
-        'ncbi': 'NCBI Publications',
-        'news': 'Latest News',
-        'snomed': 'SNOMED-CT Medical Terminology'
-      };
-      setAvailableSources(fallbackSources);
-      setSelectedSources(Object.keys(fallbackSources));
+      setResults(data);
+      
+      // After getting results, get the summary
+      if (Object.keys(data).length > 0) {
+        const summaryResponse = await fetch('/api/summarize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: searchQuery,
+            type: type,
+            data: data,
+          }),
+        });
+        
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          setSummary(summaryData);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error searching:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Function to handle source selection changes
-  const handleSourceChange = (source) => {
-    setSelectedSources(prev => {
-      if (prev.includes(source)) {
-        return prev.filter(s => s !== source);
-      } else {
-        return [...prev, source];
-      }
-    });
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
+    <div className="app">
+      <header className="app-header">
         <h1>Drug Information Dashboard</h1>
       </header>
       
-      <main>
-        {loading ? (
-          <div className="loading">Loading sources...</div>
-        ) : (
-          <div className="content">
-            <div className="sources-selection">
-              <h2>Data Sources</h2>
-              {Object.entries(availableSources).map(([key, name]) => (
-                <div key={key} className="source-item">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={selectedSources.includes(key)}
-                      onChange={() => handleSourceChange(key)}
-                    />
-                    {name}
-                  </label>
-                </div>
-              ))}
-            </div>
-            
-            <div className="results-area">
-              {/* Render your search results or data display here */}
-              {selectedSources.length > 0 ? (
-                <p>Selected sources: {selectedSources.join(', ')}</p>
-              ) : (
-                <p>No sources selected. Please select at least one data source.</p>
-              )}
-            </div>
-          </div>
+      <main className="app-main">
+        <div className="search-container">
+          <SearchBar 
+            onSearch={(q, type) => {
+              setQuery(q);
+              setSearchType(type);
+              handleSearch(q, type, selectedSources);
+            }}
+            searchType={searchType}
+          />
+          
+          <SourceSelector
+            selectedSources={selectedSources}
+            onChange={(sources) => {
+              setSelectedSources(sources);
+              if (query) {
+                handleSearch(query, searchType, sources);
+              }
+            }}
+          />
+        </div>
+        
+        {error && <ErrorMessage message={error} />}
+        {loading && <LoadingSpinner />}
+        
+        {results && !loading && (
+          <ResultsDashboard 
+            results={results} 
+            summary={summary}
+            query={query}
+            searchType={searchType}
+          />
         )}
       </main>
     </div>
