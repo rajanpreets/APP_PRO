@@ -3,11 +3,11 @@ google_search_results==2.4.2
 openai==1.68.2
 pandas==2.2.3
 pydantic==2.10.6
-Requests==2.32.3
+# Remove this line: Requests==2.32.3
 streamlit==1.43.2
 flask==2.3.3
 flask-cors==4.0.0
-requests==2.31.0
+requests==2.31.0  # Keep only this one
 pandas==2.1.1
 python-dotenv==1.0.0
 beautifulsoup4==4.12.2
