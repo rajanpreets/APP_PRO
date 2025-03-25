@@ -15,7 +15,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e0e0e0; /* Using actual color instead of var */
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .card-title {
@@ -25,7 +25,7 @@
 }
 
 .search-type-badge {
-  background-color: #4a90e2; /* Using actual color instead of var */
+  background-color: #4a90e2;
   color: white;
   font-size: 0.85rem;
   padding: 0.35rem 0.75rem;
@@ -36,7 +36,7 @@
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
-  border-bottom: 1px solid #e0e0e0; /* Using actual color instead of var */
+  border-bottom: 1px solid #e0e0e0;
   margin-bottom: 0;
   padding-bottom: 0;
   -webkit-overflow-scrolling: touch;
@@ -48,7 +48,7 @@
 }
 
 .tabs::-webkit-scrollbar-thumb {
-  background-color: #4a90e2; /* Using actual color instead of var */
+  background-color: #4a90e2;
 }
 
 .tab {
@@ -60,12 +60,12 @@
 }
 
 .tab:hover {
-  color: #4a90e2; /* Using actual color instead of var */
+  color: #4a90e2;
 }
 
 .tab.active {
-  border-bottom-color: #4a90e2; /* Using actual color instead of var */
-  color: #4a90e2; /* Using actual color instead of var */
+  border-bottom-color: #4a90e2;
+  color: #4a90e2;
   font-weight: 500;
 }
 
@@ -77,7 +77,7 @@
 .no-results {
   padding: 3rem 1rem;
   text-align: center;
-  color: #888; /* Using actual color instead of var */
+  color: #888;
 }
 
 .loading-placeholder {
@@ -85,7 +85,7 @@
   justify-content: center;
   align-items: center;
   height: 400px;
-  color: #888; /* Using actual color instead of var */
+  color: #888;
 }
 
 @media (max-width: 768px) {
