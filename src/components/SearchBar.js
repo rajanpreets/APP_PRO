@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './SearchBar.css';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
@@ -60,52 +61,6 @@ const SearchBar = ({ onSearch }) => {
           </button>
         </div>
       </form>
-      
-      <style jsx>{`
-        .search-bar {
-          width: 100%;
-        }
-        
-        .search-type-selector {
-          display: flex;
-          gap: 1.5rem;
-          margin-bottom: 1rem;
-        }
-        
-        .radio-label {
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-        }
-        
-        .radio-label input {
-          margin-right: 0.5rem;
-        }
-        
-        .search-input-container {
-          display: flex;
-          gap: 0.5rem;
-        }
-        
-        .search-input {
-          flex-grow: 1;
-        }
-        
-        .search-button {
-          white-space: nowrap;
-          min-width: 120px;
-        }
-        
-        @media (max-width: 576px) {
-          .search-input-container {
-            flex-direction: column;
-          }
-          
-          .search-button {
-            width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 };
