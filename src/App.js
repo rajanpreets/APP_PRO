@@ -56,7 +56,7 @@ function App() {
       setResults(processedData);
       
       // After getting results, get the summary
-      if (Object.keys(data).length > 0) {
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
         try {
           const summaryResponse = await fetch(`${API_URL}/api/summarize`, {
             method: 'POST',
@@ -82,6 +82,8 @@ function App() {
           console.error('Error getting summary:', summaryErr);
           setSummary({ error: summaryErr.message });
         }
+      } else {
+        setSummary({ message: 'No data available for summarization' });
       }
     } catch (err) {
       setError(err.message);
