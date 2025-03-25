@@ -1,148 +1,298 @@
 import React, { useState } from 'react';
 
 const NewsTab = ({ data }) => {
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('regulatory');
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [view, setView] = useState('list');
   
-  // Handle empty or error data
-  if (!data || !Object.keys(data).length) {
+  // Check if we have valid news data
+  if (!data || typeof data !== 'object') {
     return (
-      <div className="no-data">
+      <div className="no-results">
+        <p>No news articles found.</p>
+      </div>
+    );
+  }
+
+  // Get available categories from data
+  const categories = ['regulatory', 'commercial', 'clinical', 'other'].filter(
+    cat => Array.isArray(data[cat]) && data[cat].length > 0
+  );
+  
+  // If no categories have articles, show empty state
+  if (categories.length === 0) {
+    return (
+      <div className="no-results">
         <p>No news articles found.</p>
       </div>
     );
   }
   
-  // Prepare data structure
-  const categories = ['regulatory', 'commercial', 'clinical', 'other'];
-  const allArticles = [
-    ...getArticlesFromCategory('regulatory'),
-    ...getArticlesFromCategory('commercial'),
-    ...getArticlesFromCategory('clinical'),
-    ...getArticlesFromCategory('other')
-  ];
-  
-  // Helper function to get articles from a category
-  function getArticlesFromCategory(category) {
-    if (!data[category] || !Array.isArray(data[category])) return [];
-    return data[category].map(article => ({...article, category}));
+  // Set active category to the first available one if current selection has no articles
+  if (!categories.includes(activeCategory) && categories.length > 0) {
+    setActiveCategory(categories[0]);
   }
   
-  // Get current articles to display
-  const currentArticles = activeCategory === 'all' 
-    ? allArticles 
-    : getArticlesFromCategory(activeCategory);
-    
   // Format date
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     
     try {
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
       
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return 'Today';
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+      } else {
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
     } catch {
       return dateStr;
     }
   };
+  
+  // Get the summary for the current category
+  const getCategorySummary = () => {
+    if (data.summaries && data.summaries[activeCategory]) {
+      return data.summaries[activeCategory];
+    }
+    return `No summary available for ${activeCategory} news.`;
+  };
+  
+  // Get the articles for the current category
+  const getCategoryArticles = () => {
+    if (Array.isArray(data[activeCategory])) {
+      return data[activeCategory];
+    }
+    return [];
+  };
+  
+  // Format category label
+  const formatCategoryLabel = (category) => {
+    return category.charAt(0).toUpperCase() + category.slice(1);
+  };
+  
+  const categoryArticles = getCategoryArticles();
+
+  // Handle viewing article details
+  const handleViewArticle = (article) => {
+    setSelectedArticle(article);
+    setView('detail');
+  };
+
+  // Handle going back to list view
+  const handleBackToList = () => {
+    setSelectedArticle(null);
+    setView('list');
+  };
+
+  // Render article list view
+  const renderArticleList = () => {
+    return (
+      <>
+        <div className="news-summary">
+          <p>{getCategorySummary()}</p>
+        </div>
+        
+        <div className="news-list">
+          {categoryArticles.length === 0 ? (
+            <div className="no-articles">
+              <p>No articles found in this category.</p>
+            </div>
+          ) : (
+            categoryArticles.map((article, idx) => (
+              <div key={idx} className="news-article" onClick={() => handleViewArticle(article)}>
+                {article.url_to_image || article.thumbnail ? (
+                  <div className="article-image">
+                    <img 
+                      src={article.url_to_image || article.thumbnail} 
+                      alt={article.title}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : null}
+                
+                <div className="article-content">
+                  <h4 className="article-title">
+                    <a 
+                      href={article.url || article.link} 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {article.title}
+                    </a>
+                  </h4>
+                  
+                  <div className="article-meta">
+                    {article.source && (
+                      <span className="article-source">{article.source}</span>
+                    )}
+                    {article.published_at || article.date ? (
+                      <span className="article-date">
+                        {formatDate(article.published_at || article.date)}
+                      </span>
+                    ) : null}
+                  </div>
+                  
+                  {article.description || article.snippet ? (
+                    <p className="article-description">{article.description || article.snippet}</p>
+                  ) : null}
+                  
+                  {article.author && (
+                    <div className="article-author">By: {article.author}</div>
+                  )}
+
+                  {article.content && (
+                    <div className="has-content">
+                      <span>Additional content available - click to view</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </>
+    );
+  };
+
+  // Render article detail view
+  const renderArticleDetail = () => {
+    if (!selectedArticle) return null;
+
+    return (
+      <div className="article-detail">
+        <button className="back-button" onClick={handleBackToList}>
+          ← Back to news list
+        </button>
+        
+        <h3 className="detail-title">
+          <a 
+            href={selectedArticle.url || selectedArticle.link} 
+            target="_blank" 
+            rel="noopener noreferrer"
+          >
+            {selectedArticle.title}
+          </a>
+        </h3>
+        
+        <div className="detail-meta">
+          {selectedArticle.source && (
+            <span className="detail-source">{selectedArticle.source}</span>
+          )}
+          {selectedArticle.published_at || selectedArticle.date ? (
+            <span className="detail-date">
+              {formatDate(selectedArticle.published_at || selectedArticle.date)}
+            </span>
+          ) : null}
+          {selectedArticle.author && (
+            <span className="detail-author">By: {selectedArticle.author}</span>
+          )}
+        </div>
+        
+        {(selectedArticle.url_to_image || selectedArticle.thumbnail) && (
+          <div className="detail-image">
+            <img 
+              src={selectedArticle.url_to_image || selectedArticle.thumbnail} 
+              alt={selectedArticle.title}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        
+        {selectedArticle.description || selectedArticle.snippet ? (
+          <div className="detail-section">
+            <h4>Summary</h4>
+            <p>{selectedArticle.description || selectedArticle.snippet}</p>
+          </div>
+        ) : null}
+        
+        {selectedArticle.content ? (
+          <div className="detail-section">
+            <h4>Full Content</h4>
+            <div className="detail-content">
+              {selectedArticle.content.split('\n').map((para, idx) => (
+                para.trim() ? <p key={idx}>{para}</p> : null
+              ))}
+            </div>
+          </div>
+        ) : null}
+        
+        {selectedArticle.full_text ? (
+          <div className="detail-section">
+            <h4>Additional Content</h4>
+            <div className="detail-content">
+              {selectedArticle.full_text.split('\n').map((para, idx) => (
+                para.trim() ? <p key={idx}>{para}</p> : null
+              ))}
+            </div>
+          </div>
+        ) : null}
+        
+        <div className="detail-footer">
+          <a 
+            href={selectedArticle.url || selectedArticle.link} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="source-link"
+          >
+            Read full article on original source
+          </a>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="news-tab">
+    <div className="news-results">
       <div className="news-header">
         <h3 className="news-title">Latest News</h3>
         
-        <div className="news-categories">
-          <button 
-            className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('all')}
-          >
-            All ({allArticles.length})
-          </button>
-          
-          {categories.map(category => {
-            const count = getArticlesFromCategory(category).length;
-            if (count === 0) return null;
-            
-            return (
-              <button 
+        {view === 'list' && (
+          <div className="news-tabs">
+            {categories.map(category => (
+              <div 
                 key={category}
-                className={`category-btn ${activeCategory === category ? 'active' : ''}`}
+                className={`news-tab ${activeCategory === category ? 'active' : ''}`}
                 onClick={() => setActiveCategory(category)}
               >
-                {category.charAt(0).toUpperCase() + category.slice(1)} ({count})
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      
-      {data.summaries && data.summaries[activeCategory === 'all' ? 'regulatory' : activeCategory] && (
-        <div className="news-summary">
-          <p>{data.summaries[activeCategory === 'all' ? 'regulatory' : activeCategory]}</p>
-        </div>
-      )}
-      
-      <div className="news-articles">
-        {currentArticles.length === 0 ? (
-          <div className="no-articles">
-            <p>No articles found in this category.</p>
-          </div>
-        ) : (
-          currentArticles.map((article, idx) => (
-            <div key={idx} className="news-article">
-              {article.thumbnail && (
-                <div className="article-image">
-                  <img src={article.thumbnail} alt={article.title} />
-                </div>
-              )}
-              
-              <div className="article-content">
-                <div className={`article-category ${article.category}`}>
-                  {article.category.charAt(0).toUpperCase() + article.category.slice(1)}
-                </div>
-                
-                <h4 className="article-title">
-                  <a 
-                    href={article.link} 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {article.title}
-                  </a>
-                </h4>
-                
-                <div className="article-meta">
-                  {article.source && (
-                    <span className="article-source">{article.source}</span>
-                  )}
-                  {article.date && (
-                    <span className="article-date">{formatDate(article.date)}</span>
-                  )}
-                </div>
-                
-                {article.snippet && (
-                  <p className="article-description">{article.snippet}</p>
-                )}
-                
-                {article.content && (
-                  <p className="article-content-preview">
-                    {article.content.length > 200 
-                      ? article.content.substring(0, 200) + '...' 
-                      : article.content}
-                  </p>
-                )}
+                {formatCategoryLabel(category)} ({data[category].length})
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
       
+      {view === 'list' ? renderArticleList() : renderArticleDetail()}
+      
       <style jsx>{`
-        .news-tab {
+        .news-results {
           padding: 0.5rem;
         }
         
@@ -156,28 +306,27 @@ const NewsTab = ({ data }) => {
           color: var(--primary-color);
         }
         
-        .news-categories {
+        .news-tabs {
           display: flex;
           flex-wrap: wrap;
           gap: 0.5rem;
           margin-bottom: 1rem;
         }
         
-        .category-btn {
-          background-color: #f5f5f5;
-          border: none;
+        .news-tab {
           padding: 0.5rem 1rem;
+          background-color: #f5f5f5;
           border-radius: 20px;
-          font-size: 0.9rem;
           cursor: pointer;
-          transition: all 0.2s ease;
+          font-size: 0.9rem;
+          transition: all 0.2s;
         }
         
-        .category-btn:hover {
+        .news-tab:hover {
           background-color: #e0e0e0;
         }
         
-        .category-btn.active {
+        .news-tab.active {
           background-color: var(--secondary-color);
           color: white;
         }
@@ -191,29 +340,36 @@ const NewsTab = ({ data }) => {
           line-height: 1.6;
         }
         
-        .news-articles {
+        .news-list {
           display: grid;
           gap: 1.5rem;
         }
         
         .news-article {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+          grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
           gap: 1rem;
           padding: 1rem;
           border: 1px solid var(--border-color);
           border-radius: 8px;
-          transition: all 0.2s ease;
+          transition: transform 0.2s, box-shadow 0.2s;
+          cursor: pointer;
         }
         
         .news-article:hover {
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        @media (max-width: 768px) {
+          .news-article {
+            grid-template-columns: 1fr;
+          }
         }
         
         .article-image {
           width: 100%;
-          height: 120px;
+          height: 160px;
           overflow: hidden;
           border-radius: 6px;
         }
@@ -224,43 +380,9 @@ const NewsTab = ({ data }) => {
           object-fit: cover;
         }
         
-        .article-content {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .article-category {
-          display: inline-block;
-          font-size: 0.8rem;
-          padding: 0.2rem 0.5rem;
-          border-radius: 4px;
-          margin-bottom: 0.5rem;
-          font-weight: 500;
-        }
-        
-        .article-category.regulatory {
-          background-color: rgba(231, 76, 60, 0.1);
-          color: #e74c3c;
-        }
-        
-        .article-category.commercial {
-          background-color: rgba(46, 204, 113, 0.1);
-          color: #2ecc71;
-        }
-        
-        .article-category.clinical {
-          background-color: rgba(52, 152, 219, 0.1);
-          color: #3498db;
-        }
-        
-        .article-category.other {
-          background-color: rgba(155, 89, 182, 0.1);
-          color: #9b59b6;
-        }
-        
         .article-title {
           font-size: 1.1rem;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
           line-height: 1.4;
         }
         
@@ -287,14 +409,27 @@ const NewsTab = ({ data }) => {
           font-weight: 500;
         }
         
-        .article-description, .article-content-preview {
+        .article-description {
           font-size: 0.95rem;
           line-height: 1.6;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
           color: var(--text-color);
         }
         
-        .no-articles, .no-data {
+        .article-author {
+          font-size: 0.85rem;
+          color: var(--light-text);
+          font-style: italic;
+        }
+        
+        .has-content {
+          color: var(--secondary-color);
+          font-size: 0.85rem;
+          font-style: italic;
+          margin-top: 0.5rem;
+        }
+        
+        .no-results, .no-articles {
           display: flex;
           height: 200px;
           justify-content: center;
@@ -304,14 +439,107 @@ const NewsTab = ({ data }) => {
           border-radius: 6px;
         }
         
-        @media (max-width: 768px) {
-          .news-article {
-            grid-template-columns: 1fr;
-          }
-          
-          .article-image {
-            height: 180px;
-          }
+        /* Detail view styles */
+        .article-detail {
+          padding: 0 0.5rem;
+        }
+        
+        .back-button {
+          background: none;
+          border: none;
+          color: var(--secondary-color);
+          cursor: pointer;
+          padding: 0.5rem 0;
+          margin-bottom: 1rem;
+          font-size: 0.95rem;
+          display: inline-flex;
+          align-items: center;
+        }
+        
+        .back-button:hover {
+          text-decoration: underline;
+        }
+        
+        .detail-title {
+          font-size: 1.5rem;
+          margin-bottom: 1rem;
+          color: var(--primary-color);
+          line-height: 1.4;
+        }
+        
+        .detail-title a {
+          color: inherit;
+          text-decoration: none;
+        }
+        
+        .detail-title a:hover {
+          text-decoration: underline;
+        }
+        
+        .detail-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+          font-size: 0.9rem;
+          color: var(--light-text);
+        }
+        
+        .detail-image {
+          width: 100%;
+          max-height: 400px;
+          overflow: hidden;
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+        }
+        
+        .detail-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        
+        .detail-section {
+          margin-bottom: 1.5rem;
+          padding: 1.25rem;
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          background-color: rgba(52, 152, 219, 0.03);
+        }
+        
+        .detail-section h4 {
+          margin-bottom: 1rem;
+          color: var(--primary-color);
+          font-size: 1.1rem;
+        }
+        
+        .detail-content {
+          line-height: 1.7;
+        }
+        
+        .detail-content p {
+          margin-bottom: 1rem;
+        }
+        
+        .detail-footer {
+          margin-top: 2rem;
+          padding-top: 1rem;
+          border-top: 1px solid var(--border-color);
+          text-align: center;
+        }
+        
+        .source-link {
+          display: inline-block;
+          padding: 0.75rem 1.5rem;
+          background-color: var(--secondary-color);
+          color: white;
+          text-decoration: none;
+          border-radius: 4px;
+          transition: background-color 0.2s;
+        }
+        
+        .source-link:hover {
+          background-color: #2980b9;
         }
       `}</style>
     </div>
