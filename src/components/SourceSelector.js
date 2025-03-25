@@ -1,6 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const SourceSelector = ({ sources, selectedSources, onChange }) => {
+  // Fallback sources if API fails
+  const fallbackSources = {
+    'fda': 'FDA Drug Information',
+    'clinical_trials': 'Clinical Trials',
+    'sec': 'SEC Company Information',
+    'ncbi': 'NCBI Publications',
+    'news': 'Latest News',
+    'snomed': 'SNOMED-CT Medical Terminology'
+  };
+
+  // Use available sources or fallback
+  const displaySources = Object.keys(sources).length > 0 ? sources : fallbackSources;
+
   const handleSourceToggle = (sourceKey) => {
     if (selectedSources.includes(sourceKey)) {
       onChange(selectedSources.filter(key => key !== sourceKey));
@@ -10,15 +23,22 @@ const SourceSelector = ({ sources, selectedSources, onChange }) => {
   };
 
   const handleSelectAll = () => {
-    onChange(Object.keys(sources));
+    onChange(Object.keys(displaySources));
   };
 
   const handleSelectNone = () => {
     onChange([]);
   };
 
+  // If no sources in props but we have selectedSources, initialize with fallback
+  useEffect(() => {
+    if (Object.keys(sources).length === 0 && selectedSources.length === 0) {
+      onChange(Object.keys(fallbackSources));
+    }
+  }, [sources, selectedSources]);
+
   // Sort sources alphabetically by their labels
-  const sortedSources = Object.entries(sources).sort((a, b) => a[1].localeCompare(b[1]));
+  const sortedSources = Object.entries(displaySources).sort((a, b) => a[1].localeCompare(b[1]));
 
   return (
     <div className="source-selector">
