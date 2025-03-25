@@ -6,6 +6,8 @@ import ResultsDashboard from './components/ResultsDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [query, setQuery] = useState('');
   const [searchType, setSearchType] = useState('drug');
@@ -25,7 +27,7 @@ function App() {
       console.log('Searching for:', searchQuery, type, sources);
       
       // API call to your backend search endpoint
-      const response = await fetch('/api/search', {
+      const response = await fetch(`${API_URL}/api/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +58,7 @@ function App() {
       // After getting results, get the summary
       if (Object.keys(data).length > 0) {
         try {
-          const summaryResponse = await fetch('/api/summarize', {
+          const summaryResponse = await fetch(`${API_URL}/api/summarize`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
